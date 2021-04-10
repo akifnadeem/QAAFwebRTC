@@ -71,6 +71,26 @@ document.querySelector('#currentRoom').innerText = `Current room is ${roomId} - 
   // Code for creating a room above
 
   // Code for collecting ICE candidates below
+  async function collectIceCandidates(roomRef, peerConnection,
+                                    localName, remoteName) {
+    const candidatesCollection = roomRef.collection(localName);
+
+    peerConnection.addEventListener('icecandidate', event -> {
+        if (event.candidate) {
+            const json = event.candidate.toJSON();
+            candidatesCollection.add(json);
+        }
+    });
+
+    roomRef.collection(remoteName).onSnapshot(snapshot -> {
+        snapshot.docChanges().forEach(change -> {
+            if (change.type === "added") {
+                const candidate = new RTCIceCandidate(change.doc.data());
+                peerConneciton.addIceCandidate(candidate);
+            }
+        });
+    })
+}
 
   // Code for collecting ICE candidates above
 
@@ -90,7 +110,20 @@ document.querySelector('#currentRoom').innerText = `Current room is ${roomId} - 
 
   // Listen for remote ICE candidates above
 }
+//8- join room code by akif
+const offer = roomSnapshot.data().offer;
+await peerConnection.setRemoteDescription(offer);
+const answer = await peerConnection.createAnswer();
+await peerConnection.setLocalDescription(answer);
 
+const roomWithAnswer = {
+    answer: {
+        type: answer.type,
+        sdp: answer.sdp
+    }
+}
+await roomRef.update(roomWithAnswer);
+// join room above
 function joinRoom() {
   document.querySelector('#createBtn').disabled = true;
   document.querySelector('#joinBtn').disabled = true;
